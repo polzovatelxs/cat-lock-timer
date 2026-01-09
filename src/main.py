@@ -25,6 +25,8 @@ class CatLockCore:
         self.program_running = True
         self.blocked_keys = set()
         self.changing_hotkey_queue = Queue()
+        self.last_activity_time = time.monotonic()
+        self.activity_hook = keyboard.hook(self._record_activity, suppress=False)
         self.start_hotkey_listener()
         self.clear_pressed_events_thread = threading.Thread(target=clear_pressed_events, daemon=True)
         self.clear_pressed_events_thread.start()
@@ -51,6 +53,7 @@ class CatLockCore:
         if self.root:
             self.root.destroy()
         keyboard.stash_state()
+        self.last_activity_time = time.monotonic()
 
     def send_hotkey_signal(self) -> None:
         self.show_overlay_queue.put(True)
@@ -60,6 +63,21 @@ class CatLockCore:
         self.program_running = False
         self.unlock_keyboard()
         icon.stop()
+
+    def _record_activity(self, event) -> None:
+        self.last_activity_time = time.monotonic()
+
+    def _auto_lock_due(self) -> bool:
+        if not getattr(self.config, "auto_lock_enabled", False):
+            return False
+        idle_minutes = getattr(self.config, "auto_lock_idle_minutes", 5)
+        if idle_minutes < 1:
+            idle_minutes = 1
+        idle_seconds = idle_minutes * 60
+        return time.monotonic() - self.last_activity_time >= idle_seconds
+
+    def _is_locked(self) -> bool:
+        return self.root is not None and self.root.winfo_exists()
 
     def start(self) -> None:
         check_lockfile()
@@ -72,6 +90,8 @@ class CatLockCore:
             UserGuideWindow(self).open()
 
         while self.program_running:
+            if self._auto_lock_due() and not self._is_locked():
+                self.send_hotkey_signal()
             if not self.show_overlay_queue.empty():
                 self.show_overlay_queue.get(block=False)
                 overlay = OverlayWindow(main=self)
