@@ -8,6 +8,7 @@ from src.util.web_browser_util import open_about
 BUNDLED_CONFIG_FILE = os.path.join("resources", "config", "config.json")
 DEFAULT_HOTKEY = "ctrl+l"
 DEFAULT_OPACITY = 0.8
+DEFAULT_AUTO_LOCK_IDLE_MINUTES = 5
 OVERLAY_OPACITY_REVISION = 1  # bump this if we need to change default again
 
 
@@ -28,6 +29,13 @@ class Config:
         self.hotkey = config.get("hotkey", DEFAULT_HOTKEY)
         self.opacity = float(config.get("opacity", DEFAULT_OPACITY))
         self.notifications_enabled = config.get("notificationsEnabled", True)
+        self.auto_lock_enabled = bool(config.get("autoLockEnabled", False))
+
+        self.auto_lock_idle_minutes = int(
+            config.get("autoLockIdleMinutes", DEFAULT_AUTO_LOCK_IDLE_MINUTES)
+        )
+        if self.auto_lock_idle_minutes < 1:
+            self.auto_lock_idle_minutes = 1
 
         self.overlay_y_percent = int(config.get("overlayYPercent", 25))
         if self.overlay_y_percent < 0:
@@ -62,9 +70,10 @@ class Config:
                 "hotkey": self.hotkey,
                 "opacity": self.opacity,
                 "notificationsEnabled": self.notifications_enabled,
+                "autoLockEnabled": self.auto_lock_enabled,
+                "autoLockIdleMinutes": self.auto_lock_idle_minutes,
                 "overlayYPercent": self.overlay_y_percent,
                 "userGuideShown": self.user_guide_shown,
                 "overlayOpacityRevision": self.overlay_opacity_revision,
             }
             json.dump(config, f)
-

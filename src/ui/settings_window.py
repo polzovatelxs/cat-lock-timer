@@ -65,6 +65,8 @@ class SettingsWindow:
     def _on_save(self):
         self.main.config.opacity = self.opacity_var.get() / 100.0
         self.main.config.overlay_y_percent = self.y_pos_var.get()
+        self.main.config.auto_lock_enabled = bool(self.auto_lock_enabled_var.get())
+        self.main.config.auto_lock_idle_minutes = self.auto_lock_idle_minutes_var.get()
         self.main.config.save()
 
         if self.preview is not None and self.preview.winfo_exists():
@@ -110,6 +112,18 @@ class SettingsWindow:
             value=getattr(self.main.config, "overlay_y_percent", 25)
         )
 
+        auto_lock_enabled = bool(
+            getattr(self.main.config, "auto_lock_enabled", False)
+        )
+        auto_lock_idle_minutes = int(
+            getattr(self.main.config, "auto_lock_idle_minutes", 5)
+        )
+        if auto_lock_idle_minutes < 1:
+            auto_lock_idle_minutes = 1
+
+        self.auto_lock_enabled_var = tk.BooleanVar(value=auto_lock_enabled)
+        self.auto_lock_idle_minutes_var = tk.IntVar(value=auto_lock_idle_minutes)
+
         # ---- Layout ----
         container = ttk.Frame(self.root, padding=10)
         container.pack(fill="both", expand=True)
@@ -154,8 +168,33 @@ class SettingsWindow:
         )
         y_slider.grid(row=1, column=0, sticky="ew", pady=(2, 0))
 
+        auto_lock_frame = ttk.LabelFrame(container, text="Auto-lock when idle")
+        auto_lock_frame.grid(row=4, column=0, sticky="ew", pady=(10, 0))
+        auto_lock_frame.columnconfigure(0, weight=1)
+
+        auto_lock_check = ttk.Checkbutton(
+            auto_lock_frame,
+            text="Enable auto-lock after inactivity",
+            variable=self.auto_lock_enabled_var,
+        )
+        auto_lock_check.grid(row=0, column=0, columnspan=2, sticky="w", pady=(2, 6))
+
+        ttk.Label(auto_lock_frame, text="Idle time (minutes):").grid(
+            row=1, column=0, sticky="w"
+        )
+        auto_lock_spin = ttk.Spinbox(
+            auto_lock_frame,
+            from_=1,
+            to=240,
+            textvariable=self.auto_lock_idle_minutes_var,
+            width=6,
+            increment=1,
+            wrap=True,
+        )
+        auto_lock_spin.grid(row=1, column=1, sticky="w", padx=(6, 0))
+
         buttons = ttk.Frame(container)
-        buttons.grid(row=4, column=0, pady=(14, 0), sticky="ew")
+        buttons.grid(row=5, column=0, pady=(14, 0), sticky="ew")
         buttons.columnconfigure(0, weight=1)
 
         btn_container = ttk.Frame(buttons)
@@ -185,4 +224,3 @@ class SettingsWindow:
         self.root.grab_set()
 
         self.root.mainloop()
-
